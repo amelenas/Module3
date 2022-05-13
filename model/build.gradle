@@ -1,0 +1,45 @@
+plugins {
+    id 'org.springframework.boot' version '2.6.6'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java-library'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-validation', version: '2.6.7'
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version: '2.6.7'
+    implementation group: 'org.hibernate', name: 'hibernate-envers', version: '6.0.0.Final', ext: 'pom'
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-hateoas', version: '2.6.7'
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.28'
+
+    testImplementation group: 'org.springframework', name: 'spring-test', version: '5.3.19'
+    testImplementation group: 'com.h2database', name: 'h2', version: '2.1.212'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+    testImplementation 'junit:junit:4.13.2'
+
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+}
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
+ext{
+    springVersion = '5.6.6'
+}
+
+test {
+    useJUnitPlatform()
+}
