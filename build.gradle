@@ -1,0 +1,7 @@
+allprojects {
+    group 'com.epam.esm.module3'
+}
+
+wrapper {
+    gradleVersion = '7.3.3'
+}

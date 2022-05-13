@@ -1,0 +1,6 @@
+rootProject.name = 'Module3'
+include 'model'
+include 'service'
+include 'web'
+include 'logging'
+
