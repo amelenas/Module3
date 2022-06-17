@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 public class TagConverterImpl implements DtoConverter<Tag, TagDto> {
 
     private final ModelMapper modelMapper;
-
     @Override
     public Tag convertToEntity(TagDto tagDto) {
         return modelMapper.map(tagDto, Tag.class);

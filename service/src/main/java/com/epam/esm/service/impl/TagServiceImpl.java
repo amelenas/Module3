@@ -1,113 +1,88 @@
 package com.epam.esm.service.impl;
 
-import com.epam.esm.dao.TagDao;
+import com.epam.esm.dao.CertificateRepository;
+import com.epam.esm.dao.OrderRepository;
+import com.epam.esm.dao.TagRepository;
+import com.epam.esm.dao.UserRepository;
+import com.epam.esm.dao.entity.Certificate;
+import com.epam.esm.dao.entity.Order;
 import com.epam.esm.dao.entity.Tag;
 import com.epam.esm.service.TagService;
 import com.epam.esm.service.dto.DtoConverter;
 import com.epam.esm.service.dto.entity.TagDto;
-import com.epam.esm.service.exception.ExceptionHandler;
 import com.epam.esm.service.exception.ServiceException;
 import com.epam.esm.service.validation.Validator;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.epam.esm.service.exception.ExceptionMessage.*;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class TagServiceImpl implements TagService {
-    private final TagDao tagDao;
     private final DtoConverter<Tag, TagDto> tagDtoConverter;
-    private final  ExceptionHandler exceptionHandler;
+    private final TagRepository tagRepository;
+    private final UserRepository userRepository;
+    private final CertificateRepository certificateRepository;
 
-    @Autowired
-    public TagServiceImpl(TagDao tagDao, DtoConverter<Tag, TagDto> tagDtoConverter, ExceptionHandler exceptionHandler) {
-        this.tagDao = tagDao;
-        this.tagDtoConverter = tagDtoConverter;
-        this.exceptionHandler = exceptionHandler;
-    }
+    private final OrderRepository orderRepository;
 
-    @Override
     public TagDto create(TagDto tagDto) throws ServiceException {
-        exceptionHandler.clean();
-        Tag tag = tagDtoConverter.convertToEntity(tagDto);
-
-        if (!Validator.validateName(tag.getName(), exceptionHandler)) {
-            throw new ServiceException(exceptionHandler);
+        if(tagDto == null) {throw new ServiceException(TAG_EMPTY);}
+        Validator.validateName(tagDto.getName());
+        if (tagRepository.findTagByName(tagDto.getName()).isPresent()){
+            throw new ServiceException(TAG_EXIST);
         }
-        if (tagDao.findByName(tag.getName()).isPresent()) {
-            exceptionHandler.addException(TAG_EXIST, tag.getName());
-            throw new ServiceException(exceptionHandler);
-        }
-        exceptionHandler.addException(EXTRACTING_OBJECT_ERROR, tag);
-        return tagDtoConverter.convertToDto(tagDao.create(tag).orElseThrow(() -> new ServiceException(exceptionHandler)));
+        return tagDtoConverter.convertToDto(tagRepository.save(tagDtoConverter.convertToEntity(tagDto)));
     }
 
-    @Override
-    public boolean delete(long id) throws ServiceException {
-        exceptionHandler.clean();
-        if (!Validator.isGreaterZero(id, exceptionHandler)) {
-            throw new ServiceException(exceptionHandler);
-        }
-        return tagDao.delete(id);
+    public void delete(Integer id) throws ServiceException {
+        Validator.isGreaterZero(id);
+        if (!tagRepository.existsById(id)){
+            throw new ServiceException(TAG_NOT_FOUND);
+        }else {
+            tagRepository.deleteById(id);}
     }
-
-    @Override
-    public List<TagDto> findAll(int page, int size) throws ServiceException {
-        exceptionHandler.clean();
-        List<Tag> tags = tagDao.findAll(page, size);
+    public Page<TagDto> findAll(Pageable pageable) throws ServiceException {
+        Page<Tag> tags = tagRepository.findAll(pageable);
         if (tags.isEmpty()) {
-            exceptionHandler.addException(EMPTY_LIST, tags);
-            throw new ServiceException(exceptionHandler);
+            throw new ServiceException(EMPTY_LIST);
         } else {
-            return tags.stream().map(tagDtoConverter::convertToDto).collect(Collectors.toList());
+            return tags.map(tagDtoConverter::convertToDto);
         }
     }
-
-    @Override
-    public TagDto find(long id) throws ServiceException {
-        exceptionHandler.clean();
-        if (!Validator.isGreaterZero(id, exceptionHandler)) {
-            throw new ServiceException(exceptionHandler);
-        }
-        exceptionHandler.addException(TAG_NOT_FOUND, id);
-        return tagDtoConverter.convertToDto(tagDao.find(id).orElseThrow(() -> new ServiceException(exceptionHandler)));
+    public TagDto find(Integer id) throws ServiceException {
+        Validator.isGreaterZero(id);
+        return tagDtoConverter.convertToDto(tagRepository.findById(id).orElseThrow(() -> new ServiceException(TAG_NOT_FOUND)));
     }
-
-    @Override
-    public TagDto update(long id, TagDto tagDto) {
-        exceptionHandler.clean();
-        Tag tag = tagDtoConverter.convertToEntity(tagDto);
-        if (!Validator.isGreaterZero(id, exceptionHandler) ||
-                !Validator.validateName(tag.getName(), exceptionHandler)) {
-            throw new ServiceException(exceptionHandler);
+    public TagDto findMostPopularTagOfUserWithHighestCostOfOrder() {
+        Integer userId = userRepository.findUserIdWithTheBiggestSumOrders();
+        List<Order> usersOrders = orderRepository.findOrdersByUserId(userId);
+        List<Certificate> certificates = new ArrayList<>();
+        for(Order order : usersOrders){
+            certificates.add(certificateRepository.findById(order.getCertificateId()).orElseThrow(()-> new ServiceException(ERR_NO_SUCH_CERTIFICATES)));
         }
-        exceptionHandler.addException(PROBLEM_CREATE, id);
-        return  tagDtoConverter.convertToDto(tagDao.update(id, tag).orElseThrow(() -> new ServiceException(exceptionHandler)));
-    }
-
-    @Override
-    public List<TagDto> findMostPopularTagOfUserWithHighestCostOfOrder() {
-        exceptionHandler.clean();
-        Optional<Tag> tagsWithHighestCost = tagDao.findMostPopularTagOfUserWithHighestCostOfOrder();
-        List<Tag> result = new ArrayList<>();
-        tagsWithHighestCost.ifPresent(result::add);
-        if (result.isEmpty()) {
-            exceptionHandler.addException(EMPTY_LIST, tagsWithHighestCost);
-            throw new ServiceException(exceptionHandler);
+        List<Tag> tags = new ArrayList<>();
+        for(Certificate certificate : certificates){
+           if (!certificate.getTagNames().isEmpty()){
+               for (Tag tag : certificate.getTagNames()){
+            tags.add(tagRepository.findById(tag.getId()).orElseThrow(()-> new ServiceException(TAG_NOT_FOUND)));
+               }
+           }
         }
-        return result.stream().map(tagDtoConverter::convertToDto).collect(Collectors.toList());
-    }
 
-    @Override
-    public long findSize() {
-        return tagDao.findSize();
+        return tagDtoConverter.convertToDto(tags.stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet().stream().max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey).orElseThrow(() ->  new ServiceException(EMPTY_LIST)));
     }
 }
 

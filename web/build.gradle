@@ -14,23 +14,24 @@ repositories {
 }
 mainClassName = 'com.epam.esm.controller.WebApplication'
 dependencies {
-    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-devtools
-    implementation group: 'org.springframework.boot', name: 'spring-boot-devtools', version: '2.6.7'
-
-
     implementation group: 'org.springframework.boot', name: 'spring-boot-starter-validation', version: '2.6.7'
-    implementation 'org.springframework.boot:spring-boot-starter-hateoas:2.6.7'
-    implementation 'org.springframework.boot:spring-boot-starter-web:2.6.7'
-    implementation 'org.projectlombok:lombok:1.18.24'
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    implementation 'org.springframework.boot:spring-boot-starter-hateoas:2.7.0'
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-security', version: '2.7.0'
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '2.7.0'
+    implementation group: 'org.springframework.security.oauth', name: 'spring-security-oauth2', version: '2.5.2.RELEASE'
+    implementation group: 'io.jsonwebtoken', name: 'jjwt', version: '0.9.1'
+    implementation group: 'org.springframework.security', name: 'spring-security-jwt', version: '1.1.1.RELEASE'
+    implementation group: 'org.springframework.security', name: 'spring-security-oauth2-resource-server', version: '5.7.1'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version: '2.6.7'
-    implementation group: 'org.modelmapper', name: 'modelmapper', version: '3.1.0'
-    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-hateoas', version: '2.6.7'
+    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
     implementation group: 'org.springframework.boot', name: 'spring-boot-starter-actuator', version: '2.6.7'
+    implementation 'org.projectlombok:lombok:1.18.24'
 
-    testImplementation group: 'com.h2database', name: 'h2', version: '2.1.212'
+    annotationProcessor 'org.projectlombok:lombok:1.18.24'
 
-    runtimeOnly 'mysql:mysql-connector-java'
+    testImplementation group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '2.7.0'
+    testImplementation group: 'org.springframework.security', name: 'spring-security-test', version: '5.7.1'
 
     implementation project(":service")
     implementation project(":model")
@@ -43,5 +44,5 @@ test {
     useJUnitPlatform()
 }
 jar {
-    manifest.attributes("Main-Class": mainClassName);
+    manifest.attributes("Main-Class": mainClassName)
 }

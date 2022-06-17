@@ -1,175 +1,158 @@
 package com.epam.esm.service.impl;
 
 import com.epam.esm.dao.CertificateDao;
-import com.epam.esm.dao.TagDao;
+import com.epam.esm.dao.CertificateRepository;
+import com.epam.esm.dao.TagRepository;
 import com.epam.esm.dao.entity.Certificate;
 import com.epam.esm.dao.entity.Tag;
 import com.epam.esm.service.CertificateService;
 import com.epam.esm.service.dto.DtoConverter;
 import com.epam.esm.service.dto.entity.CertificateDto;
-import com.epam.esm.service.exception.ExceptionHandler;
 import com.epam.esm.service.exception.ServiceException;
 import com.epam.esm.service.validation.Validator;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.epam.esm.service.exception.ExceptionMessage.*;
 
 @Service
-@Transactional
+@RequiredArgsConstructor
 public class CertificateServiceImpl implements CertificateService {
-
+    private static final String NAME = "name";
+    private static final String SORTING_ASC = "ASC";
+    private static final String SORTING_DESC = "DESC";
+    private static final String DESCRIPTION = "description";
+    private static final String PRICE = "price";
+    private static final String DURATION = "duration";
     private final DtoConverter<Certificate, CertificateDto> certificateDtoConverter;
     private final CertificateDao certificateDao;
-    private final TagDao tagDao;
-    private final ExceptionHandler exceptionHandler;
+    private final CertificateRepository certificateRepository;
+    private final TagRepository tagRepository;
 
-    @Autowired
-    public CertificateServiceImpl(DtoConverter<Certificate, CertificateDto> certificateDtoConverter, CertificateDao certificateDao,
-                                  TagDao tagDao, ExceptionHandler exceptionHandler) {
-        this.certificateDtoConverter = certificateDtoConverter;
-        this.certificateDao = certificateDao;
-        this.tagDao = tagDao;
-        this.exceptionHandler = exceptionHandler;
-    }
-
-    @Override
     public CertificateDto create(CertificateDto certificateDto) throws ServiceException {
+        Validator.validateTagsDto(certificateDto.getTagNames());
         Certificate certificate = certificateDtoConverter.convertToEntity(certificateDto);
-        exceptionHandler.clean();
-        if (!Validator.validateCertificate(certificate, exceptionHandler)) {
-            throw new ServiceException(exceptionHandler);
-        }
+        Validator.validateCertificate(certificate);
         Set<Tag> tagNames = new HashSet<>();
-        if (certificate.getTagNames() != null) {
+        if (!certificate.getTagNames().isEmpty()) {
             for (Tag tag : certificate.getTagNames()) {
-                Optional<Tag> tagControl = tagDao.findByName(tag.getName());
-                if (!tagControl.isPresent()) {
-                    tagNames.add(tagDao.create(new Tag(tag.getName())).get());
-                } else {
+                Validator.validateName(tag.getName());
+                Optional<Tag> tagControl = tagRepository.findTagByName(tag.getName());
+                if (tagControl.isPresent()) {
                     tagNames.add(tagControl.get());
+                } else {
+                    tagNames.add(tagRepository.save(new Tag(tag.getName())));
                 }
             }
+            certificate.setTagNames(tagNames);
+            return certificateDtoConverter.convertToDto(certificateRepository.save(certificate));
         }
-        certificate.setTagNames(tagNames);
-        exceptionHandler.addException(EXTRACTING_OBJECT_ERROR, certificateDto);
-        return  certificateDtoConverter.convertToDto(certificateDao.create(certificate).orElseThrow(() -> new ServiceException(exceptionHandler)));
-
+        throw new ServiceException(TAG_EMPTY);
     }
 
-    @Override
-    public boolean delete(long id) throws ServiceException {
-        exceptionHandler.clean();
-        if (!Validator.isGreaterZero(id, exceptionHandler)) {
-            throw new ServiceException(exceptionHandler);
-        }
-        return certificateDao.delete(id);
+    public void delete(Integer id) throws ServiceException {
+        Validator.isGreaterZero(id);
+        if (certificateRepository.existsById(id)) {
+            certificateRepository.deleteById(id);
+        }else {
+        throw new ServiceException(ERR_NO_SUCH_CERTIFICATES);}
     }
 
-    @Override
-    public CertificateDto update(long id, Map<String, Object> updates) throws ServiceException {
-        exceptionHandler.clean();
-        if (!Validator.isGreaterZero(id, exceptionHandler)){
-            exceptionHandler.addException(BAD_ID, updates);
-            throw new ServiceException(exceptionHandler);
+    public CertificateDto update(Integer id, Map<String, Object> updates) throws ServiceException {
+        Validator.isGreaterZero(id);
+        if (!certificateRepository.existsById(id)) {
+            throw new ServiceException(ERR_NO_SUCH_CERTIFICATES);
         }
         if (updates.isEmpty()) {
-            exceptionHandler.addException(EMPTY_LIST, updates);
-            throw new ServiceException(exceptionHandler);
+            throw new ServiceException(EMPTY_LIST);
         }
-        if(!Validator.isUpdatesValid(updates, exceptionHandler)){
-            throw new ServiceException(exceptionHandler);
+        Validator.isUpdatesValid(updates);
+        if (updates.containsKey(NAME)) {
+            certificateRepository.updateName(id, updates.get(NAME).toString());
+        } else if (updates.containsKey(DESCRIPTION)) {
+            certificateRepository.updateDescription(id, updates.get(DESCRIPTION).toString());
+        } else if (updates.containsKey(PRICE)) {
+            certificateRepository.updatePrice(id, (Double) updates.get(PRICE));
+        } else if (updates.containsKey(DURATION)) {
+            certificateRepository.updateDuration(id, (Integer) updates.get(DURATION));
         }
-        exceptionHandler.addException(EXTRACTING_OBJECT_ERROR, updates);
-        return certificateDtoConverter.convertToDto(certificateDao.update(id, updates).orElseThrow(() -> new ServiceException(exceptionHandler)));
+        return certificateDtoConverter.convertToDto(certificateRepository.findById(id).orElseThrow(() ->
+                new ServiceException(EXTRACTING_OBJECT_ERROR)));
     }
 
-    @Override
-    public List<CertificateDto> findCertificatesByAnyParams(String[] tagNames, String substr, String[] sort, int page, int limit) {
-        exceptionHandler.clean();
+    public List<CertificateDto> findCertificatesByAnyParams(String[] tagNames, String substr,
+                                                            String[] sort, String sortDirection, int skip, int limit) {
         List<Tag> tags = null;
         if (tagNames != null) {
             for (String tagName : tagNames) {
                 tags = new ArrayList<>();
-                if (!Validator.validateName(tagName, exceptionHandler)) {
-                    throw new ServiceException(exceptionHandler);
-                }
-                exceptionHandler.addException(TAG_NOT_FOUND, tagName);
-                tags.add(tagDao.findByName(tagName).orElseThrow(()-> new ServiceException(exceptionHandler)));
+                Validator.validateName(tagName);
+                tags.add(tagRepository.findTagByName(tagName).orElseThrow(() -> new ServiceException(TAG_NOT_FOUND)));
             }
         }
-        Integer skip = (page - 1) * limit;
-        List<Certificate> result = certificateDao.findByAnyParams(tags, substr, skip, limit, sort);
-        if (result.isEmpty()) {
-            exceptionHandler.addException(ERR_NO_SUCH_CERTIFICATES, result);
-            throw new ServiceException(exceptionHandler);
+        if (sortDirection.contains(SORTING_ASC) || sortDirection.contains(SORTING_DESC)) {
+            List<Certificate> result = certificateDao.findByAnyParams(tags, substr, sortDirection, skip, limit, sort);
+            if (result.isEmpty()) {
+                throw new ServiceException(ERR_NO_SUCH_CERTIFICATES);
+            }
+            return result.stream().map(certificateDtoConverter::convertToDto).collect(Collectors.toList());
         }
-        return result.stream().map(certificateDtoConverter::convertToDto).collect(Collectors.toList());
+        throw new ServiceException(EXTRACTING_OBJECT_ERROR);
     }
 
-    @Override
-    public CertificateDto find(long id) throws ServiceException {
-        exceptionHandler.clean();
-        if (!Validator.isGreaterZero(id, exceptionHandler)) {
-            throw new ServiceException(exceptionHandler);
-        }
-        exceptionHandler.addException(ERR_NO_SUCH_CERTIFICATES, id);
-        return certificateDtoConverter.convertToDto(certificateDao.find(id).orElseThrow(() -> new ServiceException(exceptionHandler)));
-        }
+    public CertificateDto find(Integer id) throws ServiceException {
+        Validator.isGreaterZero(id);
+        return certificateDtoConverter.convertToDto(certificateRepository.findById(id).orElseThrow(() ->
+                new ServiceException(ERR_NO_SUCH_CERTIFICATES)));
+    }
 
-    @Override
-    public CertificateDto update(long id, CertificateDto certificateDto) {
-        exceptionHandler.clean();
-        Certificate certificate = certificateDtoConverter.convertToEntity(certificateDto);
-        if (!Validator.isGreaterZero(id, exceptionHandler) ||
-                !Validator.validateCertificate(certificate, exceptionHandler)) {
-            throw new ServiceException(exceptionHandler);
+    public CertificateDto update(Integer id, CertificateDto certificateDto) {
+        Validator.isGreaterZero(id);
+        Validator.validateTagsDto(certificateDto.getTagNames());
+        if (!certificateRepository.existsById(id)) {
+            throw new ServiceException(ERR_NO_SUCH_CERTIFICATES);
         }
-        Optional<Certificate> result = certificateDao.find(id);
+        Certificate certificate = certificateDtoConverter.convertToEntity(certificateDto);
+        Validator.validateCertificate(certificate);
+        Optional<Certificate> result = certificateRepository.findById(id);
         if (result.isPresent()) {
             certificate.setId(id);
             certificate.setCreateDate(result.get().getCreateDate());
+        } else {
+            throw new ServiceException(ERR_NO_SUCH_CERTIFICATES);
         }
         Set<Tag> tagNames = new HashSet<>();
-        if (certificate.getTagNames() != null) {
+        if (!certificate.getTagNames().isEmpty()) {
             for (Tag tag : certificate.getTagNames()) {
-                Optional<Tag> resultTag = tagDao.findByName(tag.getName());
+                Validator.validateName(tag.getName());
+                Optional<Tag> resultTag = tagRepository.findTagByName(tag.getName());
                 if (resultTag.isPresent()) {
                     tagNames.add(resultTag.get());
                 } else {
-                    tagNames.add(tagDao.create(tag).get());
+                    tagNames.add(tagRepository.save(tag));
                 }
             }
             certificate.setTagNames(tagNames);
+            Certificate resultCertificate = certificateRepository.save(certificate);
+            resultCertificate.setLastUpdateDate(Instant.now());
+            return certificateDtoConverter.convertToDto(resultCertificate);
         }
-        Optional<Certificate> updatedCertificate = certificateDao.update(id, certificate);
-        if (updatedCertificate.isPresent()) {
-            return certificateDtoConverter.convertToDto(updatedCertificate.get());
-        } else {
-            exceptionHandler.addException(ERR_NO_SUCH_CERTIFICATES, id);
-            throw new ServiceException(exceptionHandler);
-        }
+        throw new ServiceException(TAG_EMPTY);
     }
 
-    @Override
-    public List<CertificateDto> findAll(int skip, int size) throws ServiceException {
-        exceptionHandler.clean();
-        List<Certificate> certificates = certificateDao.findAll(skip, size);
+    public Page<CertificateDto> findAll(Pageable pageable) throws ServiceException {
+        Page<Certificate> certificates = certificateRepository.findAll(pageable);
         if (certificates.isEmpty()) {
-            exceptionHandler.addException(EMPTY_LIST, certificates);
-            throw new ServiceException(exceptionHandler);
+            throw new ServiceException(EMPTY_LIST);
         } else {
-            return certificates.stream().map(certificateDtoConverter::convertToDto).collect(Collectors.toList());
+            return certificates.map(certificateDtoConverter::convertToDto);
         }
-    }
-
-    @Override
-    public long findSize() {
-        return certificateDao.findSize();
     }
 }
 

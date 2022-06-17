@@ -13,13 +13,13 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.data:spring-data-commons:2.6.4'
     implementation group: 'org.springframework.boot', name: 'spring-boot-starter-validation', version: '2.6.7'
     implementation group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version: '2.6.7'
     implementation 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
     implementation group: 'org.modelmapper', name: 'modelmapper', version: '3.1.0'
-    implementation 'org.springframework.boot:spring-boot-starter-hateoas:2.6.7'
+    implementation 'org.springframework.boot:spring-boot-starter-hateoas:2.7.0'
+    implementation group: 'org.springframework.security', name: 'spring-security-crypto', version: '5.6.5'
 
     testImplementation group: 'org.mockito', name: 'mockito-junit-jupiter', version: '4.4.0'
     testImplementation group: 'org.springframework', name: 'spring-test', version: '5.3.18'
@@ -27,9 +27,6 @@ dependencies {
     testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-params', version: '5.8.2'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
-
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.2'
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.2'
 
     implementation project(":model")
 }

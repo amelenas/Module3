@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class UserConverterImpl implements DtoConverter<User, UserDto> {
-
     private final ModelMapper modelMapper;
-
     @Override
     public User convertToEntity(UserDto userDto) {
         return modelMapper.map(userDto, User.class);

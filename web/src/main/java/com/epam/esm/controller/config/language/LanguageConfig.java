@@ -13,8 +13,7 @@ import java.util.Locale;
 
 @Configuration
 public class LanguageConfig extends AcceptHeaderLocaleResolver implements WebMvcConfigurer {
-
-    List<Locale> LOCALES = Arrays.asList(
+    private final List<Locale> locales = Arrays.asList(
             new Locale("en"),
             new Locale("ru"));
 
@@ -23,7 +22,7 @@ public class LanguageConfig extends AcceptHeaderLocaleResolver implements WebMvc
         String headerLang = request.getHeader("Accept-Language");
         return headerLang == null || headerLang.isEmpty()
                 ? Locale.getDefault()
-                : Locale.lookup(Locale.LanguageRange.parse(headerLang), LOCALES);
+                : Locale.lookup(Locale.LanguageRange.parse(headerLang), locales);
     }
 
     @Bean

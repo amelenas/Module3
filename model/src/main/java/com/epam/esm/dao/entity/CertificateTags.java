@@ -1,5 +1,9 @@
 package com.epam.esm.dao.entity;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -8,10 +12,12 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @Entity
+@Getter
+@Setter
+@ToString
 @Table(name = "gift_certificate_tags")
 public class CertificateTags implements Serializable {
     private static final long serialVersionUID = 32L;
-
     @Id
     @Column(name = "gift_certificate_id")
     Integer giftId;
@@ -20,27 +26,6 @@ public class CertificateTags implements Serializable {
     Integer tagId;
 
     public CertificateTags() {
-    }
-
-    public CertificateTags(Integer giftId, Integer tagId) {
-        this.giftId = giftId;
-        this.tagId = tagId;
-    }
-
-    public Integer getGiftId() {
-        return giftId;
-    }
-
-    public void setGiftId(Integer giftId) {
-        this.giftId = giftId;
-    }
-
-    public Integer getTagId() {
-        return tagId;
-    }
-
-    public void setTagId(Integer tagId) {
-        this.tagId = tagId;
     }
 
     @Override
@@ -56,10 +41,4 @@ public class CertificateTags implements Serializable {
         return Objects.hash(getGiftId(), getTagId());
     }
 
-    @Override
-    public String toString() {
-        return this.getClass()+
-                ", giftId = " + giftId +
-                ", tagId = " + tagId;
-    }
 }

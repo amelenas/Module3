@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.hibernate.collection.spi.PersistentCollection;
-import org.modelmapper.ModelMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -21,8 +19,7 @@ import java.util.List;
 @Configuration
 @EnableAspectJAutoProxy
 @ComponentScan(basePackages = "com.epam.esm")
-public class CommonConfig implements WebMvcConfigurer {
-
+public class  CommonConfig implements WebMvcConfigurer {
     @Bean
     public LoggingAspect loggingAspect(){
         return new LoggingAspect();
@@ -33,16 +30,6 @@ public class CommonConfig implements WebMvcConfigurer {
         ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().modules(new JavaTimeModule(), new Jdk8Module())
                 .build().configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         converters.add(new MappingJackson2HttpMessageConverter(objectMapper));
-    }
-    /**
-     * ModelMapper is used to convert an entity to a DTO
-     */
-    @Bean
-    public ModelMapper modelMapper() {
-        ModelMapper modelMapper = new ModelMapper();
-        modelMapper.getConfiguration()
-                .setPropertyCondition(context -> !(context.getSource() instanceof PersistentCollection));
-        return modelMapper;
     }
 }
 

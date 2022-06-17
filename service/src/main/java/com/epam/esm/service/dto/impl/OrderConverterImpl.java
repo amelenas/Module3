@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class OrderConverterImpl implements DtoConverter<Order, OrderDto> {
-
     private final ModelMapper modelMapper;
-
     @Override
     public Order convertToEntity(OrderDto orderDto) {
         return modelMapper.map(orderDto, Order.class);

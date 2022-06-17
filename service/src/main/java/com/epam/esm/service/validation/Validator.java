@@ -3,9 +3,9 @@ package com.epam.esm.service.validation;
 import com.epam.esm.dao.entity.Certificate;
 import com.epam.esm.dao.entity.Order;
 import com.epam.esm.dao.entity.Tag;
-import com.epam.esm.service.exception.ExceptionHandler;
+import com.epam.esm.service.dto.entity.TagDto;
+import com.epam.esm.service.exception.ServiceException;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -17,8 +17,8 @@ public class Validator {
     private static final String PRICE = "price";
     private static final String DURATION = "duration";
 
-    private static final int MAX_LENGTH_NAME = 50;
-    private static final int MIN_LENGTH_NAME = 3;
+    private static final int MAX_STRING_NAME = 50;
+    private static final int MIN_STRING_NAME = 3;
     private static final int MAX_DURATION = 12;
     private static final int MIN_DURATION = 1;
     private static final double MIN_PRICE = 0.01;
@@ -27,87 +27,89 @@ public class Validator {
     private Validator() {
     }
 
-    public static boolean validateCertificate(Certificate certificate, ExceptionHandler exceptionHandler) {
-        return certificate != null &&
-                validateName(certificate.getName(), exceptionHandler) &&
-                certificate.getDescription() != null &&
-                isGreaterZero(certificate.getPrice(), exceptionHandler) &&
-                isGreaterZero(certificate.getDuration(), exceptionHandler);
+    public static void validateCertificate(Certificate certificate) {
+        if (certificate == null) throw new ServiceException(ERR_NO_SUCH_CERTIFICATES);
+        validateName(certificate.getName());
+        if (certificate.getDescription().isEmpty()) throw new ServiceException(BAD_CERTIFICATE_DESCRIPTION);
+        isGreaterZero(certificate.getPrice());
+        isGreaterZero(certificate.getDuration());
+
     }
 
-    public static boolean isGreaterZero(long id, ExceptionHandler exceptionHandler) {
+    public static void isGreaterZero(long id) {
         if (id < 1) {
-            exceptionHandler.addException(BAD_ID, id);
-            return false;
+            throw new ServiceException(BAD_ID);
         }
-        return true;
     }
 
-    public static boolean isGreaterZero(double id, ExceptionHandler exceptionHandler) {
+    public static void isGreaterZero(double id) {
         if (id < 1) {
-            exceptionHandler.addException(BAD_ID, id);
-            return false;
+            throw new ServiceException(BAD_ID);
         }
-        return true;
     }
 
 
-    public static boolean validateName(String name, ExceptionHandler exceptionResult) {
-        if (name == null || name.length() < MIN_LENGTH_NAME || name.length() > MAX_LENGTH_NAME) {
-            exceptionResult.addException(BAD_NAME, name);
-            return false;
+    public static void validateName(String name) {
+        if (name == null || name.length() < MIN_STRING_NAME || name.length() > MAX_STRING_NAME) {
+            throw new ServiceException(BAD_NAME);
         }
-        return true;
     }
 
-    public static boolean validatePrice(double price, ExceptionHandler exceptionResult) {
+    public static void validatePrice(double price) {
         if (price < MIN_PRICE || price > MAX_PRICE) {
-            exceptionResult.addException(BAD_CERTIFICATE_PRICE, price);
-            return true;
+            throw new ServiceException(BAD_CERTIFICATE_PRICE);
         }
-        return false;
     }
 
-    public static boolean validateDuration(int duration, ExceptionHandler exceptionResult) {
+    public static void validateDuration(int duration) {
         if (duration < MIN_DURATION || duration > MAX_DURATION) {
-            exceptionResult.addException(BAD_CERTIFICATE_DURATION, duration);
-            return false;
+            throw new ServiceException(BAD_CERTIFICATE_DURATION);
         }
-        return true;
     }
 
-    public static boolean validateListOfTags(List<Tag> tags, ExceptionHandler exceptionResult) {
-        if (tags == null) return false;
-        List<Boolean> validatedTags = new ArrayList<>();
+    public static void validateListOfTags(List<Tag> tags) {
+        if (tags == null) throw new ServiceException(BAD_NAME);
         for (Tag tag : tags) {
-            validatedTags.add(validateName(tag.getName(), exceptionResult));
+            validateName(tag.getName());
         }
-        return !validatedTags.contains(false);
     }
 
-    public static boolean validateOrder(Order order, ExceptionHandler exceptionHandler) {
-        return !isGreaterZero(order.getOrderId(), exceptionHandler) &&
-                !isGreaterZero(order.getCertificateId(), exceptionHandler) &&
-                validatePrice(order.getCost(), exceptionHandler) &&
-                !isGreaterZero(order.getUserId(), exceptionHandler);
+    public static void validateOrder(Order order) {
+        isGreaterZero(order.getCertificateId());
+        validatePrice(order.getCost());
+        isGreaterZero(order.getUserId());
     }
 
-    public static boolean isUpdatesValid(Map<String, Object> updates, ExceptionHandler exceptionHandler) {
-        if (updates.containsKey(NAME) && !validateName(updates.get(NAME).toString(), exceptionHandler) ||
-                updates.containsKey(DESCRIPTION) && !Validator.validateName(updates.get(DESCRIPTION).toString(), exceptionHandler)){
-                exceptionHandler.addException(BAD_NAME, updates);
-                return false;
+    public static void isUpdatesValid(Map<String, Object> updates) {
+        if (updates.containsKey(NAME)) {
+            validateName(updates.get(NAME).toString());
+        }
+        if (updates.containsKey(DESCRIPTION)) {
+            Validator.validateName(updates.get(DESCRIPTION).toString());
+        }
+        if (updates.containsKey(PRICE)) {
+            if (updates.get(PRICE).toString().matches("-?\\d+(\\.\\d+)?")) {
+                Validator.validatePrice(Double.parseDouble(updates.get(PRICE).toString()));
+            } else {
+                throw new ServiceException(PRICE_NOT_NUMBER);
             }
-
-        if (updates.containsKey(PRICE) && Validator.validatePrice((Double) updates.get(PRICE), exceptionHandler)){
-                exceptionHandler.addException(BAD_CERTIFICATE_PRICE, updates);
-                return false;
-
         }
-        if (updates.containsKey(DURATION) && !Validator.validateDuration((Integer) updates.get(DURATION), exceptionHandler)){
-                exceptionHandler.addException(BAD_CERTIFICATE_DURATION, updates);
-                return false;
+        if (updates.containsKey(DURATION)) {
+            if (updates.get(DURATION).toString().matches("-?\\d+(\\.\\d+)?")) {
+                Validator.validateDuration(Integer.parseInt(updates.get(DURATION).toString()));
+            } else {
+                throw new ServiceException(DURATION_NOT_NUMBER);
+            }
         }
-        return true;
+    }
+
+    public static void validatePassword(String password) {
+        if (password == null || password.length() < MIN_STRING_NAME || password.length() > MAX_STRING_NAME) {
+            throw new ServiceException(BAD_PASSWORD);
+        }
+    }
+
+    public static void validateTagsDto(List<TagDto> tagNames) {
+        if (tagNames == null || tagNames.isEmpty()) throw new ServiceException(TAG_EMPTY);
     }
 }

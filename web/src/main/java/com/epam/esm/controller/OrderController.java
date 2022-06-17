@@ -4,67 +4,49 @@ import com.epam.esm.controller.config.language.Translator;
 import com.epam.esm.controller.hateoas.HateoasAdder;
 import com.epam.esm.controller.hateoas.impl.OrderHateoasImpl;
 import com.epam.esm.service.OrderService;
-import com.epam.esm.service.dto.entity.CostAndDateOfBuyDto;
 import com.epam.esm.service.dto.entity.OrderDto;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
 @RequestMapping("/orders")
 @RestController
+@RequiredArgsConstructor
 public class OrderController {
     private final OrderService orderService;
-
     private final HateoasAdder<OrderDto> hateoasAdder;
-
-    @Autowired
-    public OrderController(OrderService orderService, HateoasAdder<OrderDto> hateoasAdder) {
-        this.orderService = orderService;
-        this.hateoasAdder = hateoasAdder;
-    }
-
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_USER')")
     public ResponseEntity<String> createOrder(@RequestBody OrderDto dto) {
         orderService.create(dto);
         return new ResponseEntity<>(Translator.toLocale("new.order.created"), HttpStatus.CREATED);
     }
 
-    @GetMapping(value = "/{userId}/orders/{orderId}")
-    public ResponseEntity<CostAndDateOfBuyDto> getCostAndDateOfBuyForUserByOrderId(@PathVariable long userId,
-                                                                                   @PathVariable long orderId) {
-        return new ResponseEntity<>(orderService.findCostAndDateOfBuyForUserByOrderId(userId, orderId), HttpStatus.OK);
-    }
-
     @GetMapping
-    public CollectionModel<OrderDto> allOrders(@RequestParam(value = "page", defaultValue = "1", required = false) int page,
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<CollectionModel<OrderDto>> allOrders(@RequestParam(value = "page", defaultValue = "0", required = false) int page,
                                                @RequestParam(value = "size", defaultValue = "10", required = false) int size) {
-        List<OrderDto> list = orderService.findAll(skipQuantity(page, size), size);
+        Page<OrderDto> list = orderService.findAll(PageRequest.of(page, size, Sort.by("userId").ascending()));
         for (OrderDto dto : list) {
             hateoasAdder.addLinks(dto);
         }
-        return OrderHateoasImpl.collectionModelWithPagination(orderService.findSize(), page, size, list);
+        return OrderHateoasImpl.collectionModelWithPagination(list);
     }
 
-    @GetMapping(value = "/{userId}/orders")
-    public CollectionModel<OrderDto> findOrdersByUserId(@PathVariable long userId,
-                                                        @RequestParam(value = "page", defaultValue = "1") int page,
+    @GetMapping(value = "/{userId}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<CollectionModel<OrderDto>> findOrdersByUserId(@PathVariable Integer userId,
+                                                        @RequestParam(value = "page", defaultValue = "0") int page,
                                                         @RequestParam(value = "limit", defaultValue = "10") int limit) {
-        List<OrderDto> list = orderService.findOrdersByUserId(userId, skipQuantity(page, limit), limit);
+        Page<OrderDto> list = orderService.findOrdersByUserId(userId, PageRequest.of(page, limit, Sort.by("orderId").ascending()));
         for (OrderDto order : list) {
             hateoasAdder.addLinks(order);
         }
-        return OrderHateoasImpl.collectionModelWithPaginationUserId(userId, page, limit, list);
-    }
-
-    private int skipQuantity(int page, int size) {
-        int skip = 0;
-        if (page > 0) {
-            skip = (page - 1) * size;
-        }
-        return skip;
+        return OrderHateoasImpl.collectionModelWithPaginationUserId(userId, list);
     }
 }

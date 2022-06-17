@@ -10,18 +10,27 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class CertificateDtoConverterImpl implements DtoConverter<Certificate, CertificateDto> {
-
     private final ModelMapper modelMapper;
+
     private final DtoConverter<Tag, TagDto> tagDtoConverter;
 
     @Override
     public Certificate convertToEntity(CertificateDto certificateDto) {
-        return modelMapper.map(certificateDto, Certificate.class);
+        Certificate certificate = modelMapper.map(certificateDto, Certificate.class);
+        if (certificateDto.getTagNames() != null
+                || !certificateDto.getTagNames().isEmpty()) {
+            Set<Tag> tags = certificateDto.getTagNames().stream()
+                    .map(tagDtoConverter::convertToEntity)
+                    .collect(Collectors.toSet());
+            certificate.setTagNames(tags);
+        }
+        return certificate;
     }
 
     @Override

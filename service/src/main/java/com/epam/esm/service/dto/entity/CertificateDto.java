@@ -1,26 +1,23 @@
 package com.epam.esm.service.dto.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.hateoas.RepresentationModel;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class CertificateDto extends RepresentationModel<CertificateDto> {
 
-    private long id;
+    private Integer id;
 
     @NotNull
     @Size(min=3, max = 50)
@@ -32,7 +29,7 @@ public class CertificateDto extends RepresentationModel<CertificateDto> {
 
     @Min(value = 0)
     @Max(value = 1000000)
-    private BigDecimal price;
+    private Double price;
 
     @Min(value = 1)
     @Max(value = 12)

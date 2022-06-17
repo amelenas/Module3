@@ -1,68 +1,63 @@
 package com.epam.esm.dao.entity;
 
-import com.epam.esm.dao.entity.audit.AuditUserListener;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
 import java.util.Objects;
-
 @Entity
-@EntityListeners(AuditUserListener.class)
+@Getter
+@Setter
+@ToString
+@Builder
 @Table(name = "users")
 public class User implements Serializable {
-
     private static final long serialVersionUID = 196L;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private long userId;
+    private Integer userId;
 
     @NotNull
     @Size(min=3, max = 50)
     @Column(name = "user_name")
     private String userName;
 
+    @Column(name = "login", unique = true)
+    private String login;
 
-    @Column(name = "lock_user")
-    private Integer lock;
+    @Column(name = "password")
+    private String password;
 
+    @ManyToOne
+    @JoinColumn(name = "role_id")
+    private Role role;
+
+    public User(Integer userId, String userName, String login, String password, Role role) {
+        this.userId = userId;
+        this.userName = userName;
+        this.login = login;
+        this.password = password;
+        this.role = role;
+    }
+    public User(String userName, String login, String password,  Role role) {
+        this.userName = userName;
+        this.login = login;
+        this.password = password;
+        this.role = role;
+    }
+
+    public User(String userName, String login, String password) {
+        this.userName = userName;
+        this.login = login;
+        this.password = password;
+    }
     public User() {
-    }
-
-    public User(long userId, String userName) {
-        this.userId = userId;
-        this.userName = userName;
-    }
-
-    public User(String userName) {
-        this.userName = userName;
-    }
-
-    public long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(long userId) {
-        this.userId = userId;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public Integer getLock() {
-        return lock;
-    }
-
-    public void setLock(Integer lock) {
-        this.lock = lock;
     }
 
     @Override
@@ -70,19 +65,12 @@ public class User implements Serializable {
         if (this == o) return true;
         if (!(o instanceof User)) return false;
         User user = (User) o;
-        return getUserId() == user.getUserId() && getUserName().equals(user.getUserName());
+        return getUserId().equals(user.getUserId()) && getUserName().equals(user.getUserName());
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(getUserId(), getUserName());
-    }
-
-    @Override
-    public String toString() {
-        return this.getClass() +
-                ", userId = " + userId +
-                ", userName = " + userName;
     }
 }
 

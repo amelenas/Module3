@@ -6,17 +6,19 @@ import com.epam.esm.controller.hateoas.HateoasAdder;
 import com.epam.esm.service.dto.entity.CertificateDto;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.Link;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Component
 public class CertificateHateoasImpl implements HateoasAdder<CertificateDto> {
     private static final Class<CertificateController> CONTROLLER = CertificateController.class;
     private static final Class<TagController> TAG_CONTROLLER = TagController.class;
-
 
     @Override
     public void addLinks(CertificateDto certificateDto) {
@@ -31,8 +33,8 @@ public class CertificateHateoasImpl implements HateoasAdder<CertificateDto> {
         }
     }
 
-    public static CollectionModel<CertificateDto> getCollectionModelWithPagination(String[] tagNames, String partName,
-                                                                             String[] sort, int page, int limit, List<CertificateDto> list) {
+    public static ResponseEntity<CollectionModel<CertificateDto>> getCollectionModelWithPagination(String[] tagNames, String partName,
+                                                                             String[] sort, String sortDirection, int page, int limit, List<CertificateDto> list) {
         int firstPage = 1;
         int nextPage = list.size() < limit ? page : page + 1;
         int prevPage = page == firstPage ? firstPage : page - 1;
@@ -43,32 +45,14 @@ public class CertificateHateoasImpl implements HateoasAdder<CertificateDto> {
             partName = "";
         }
         Link self = linkTo(methodOn(CertificateController.class).findGiftCertificatesByAnyParams(tagNames, partName,
-                sort, page, limit)).withSelfRel();
+                sort, sortDirection, page, limit)).withSelfRel();
         Link next = linkTo(methodOn(CertificateController.class).findGiftCertificatesByAnyParams(tagNames, partName,
-                sort, nextPage, limit)).withRel("next");
+                sort, sortDirection, nextPage, limit)).withRel("next");
         Link prev = linkTo(methodOn(CertificateController.class).findGiftCertificatesByAnyParams(tagNames, partName,
-                sort, prevPage, limit)).withRel("prev");
+                sort, sortDirection, prevPage, limit)).withRel("prev");
         Link first = linkTo(methodOn(CertificateController.class).findGiftCertificatesByAnyParams(tagNames, partName,
-                sort, firstPage, limit)).withRel("first");
-        return CollectionModel.of(list, first, prev, self, next);
-    }
-
-
-    public static CollectionModel<CertificateDto> getCollectionModelWithPagination(long size, int page, int limit, List<CertificateDto> list) {
-        int lastPage = lastPage(size, limit);
-        int firstPage = 1;
-        int nextPage = page >= lastPage ? lastPage : page + 1;
-        int prevPage = page <= firstPage ? firstPage : page - 1;
-        Link self = linkTo(methodOn(CertificateController.class).findCertificates(page, limit)).withSelfRel();
-        Link next = linkTo(methodOn(CertificateController.class).findCertificates(nextPage, limit)).withRel("next");
-        Link prev = linkTo(methodOn(CertificateController.class).findCertificates(prevPage, limit)).withRel("prev");
-        Link first = linkTo(methodOn(CertificateController.class).findCertificates(firstPage, limit)).withRel("first");
-        Link last = linkTo(methodOn(CertificateController.class).findCertificates(lastPage, limit)).withRel("last");
-        return CollectionModel.of(list, first, prev, self, next, last);
-    }
-
-    private static int lastPage(long sizeOfList, int limit) {
-        return Math.toIntExact((sizeOfList % limit) > 0 ? sizeOfList / limit + 1 : sizeOfList / limit);
+                sort, sortDirection, firstPage, limit)).withRel("first");
+        return new ResponseEntity<>(CollectionModel.of(list, first, prev, self, next), HttpStatus.OK);
     }
 
 }

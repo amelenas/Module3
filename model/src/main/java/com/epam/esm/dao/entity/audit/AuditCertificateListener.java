@@ -7,18 +7,16 @@ import javax.persistence.PreUpdate;
 import java.time.Instant;
 
 public class AuditCertificateListener {
-    private static final Integer LOCK = 0;
-
     @PrePersist
     public void createCertificate(Certificate certificate) {
-        certificate.setLock(LOCK);
+        certificate.setCreateDate(Instant.now());
+        certificate.setLastUpdateDate(Instant.now());
         setCreateDate(certificate);
         setUpdateDate(certificate);
     }
-
     @PreUpdate
     public void updateCertificate(Certificate certificate) {
-        certificate.setLock(LOCK);
+        certificate.setLastUpdateDate(Instant.now());
         setUpdateDate(certificate);
     }
 

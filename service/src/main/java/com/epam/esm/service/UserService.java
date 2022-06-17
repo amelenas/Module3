@@ -1,6 +1,9 @@
 package com.epam.esm.service;
 
-import com.epam.esm.service.dto.entity.UserDto;
+import com.epam.esm.dao.entity.User;
 
-public interface UserService extends CRUDService<UserDto>{
+public interface UserService {
+    User findUserByLogin(String login);
+
 }
+
