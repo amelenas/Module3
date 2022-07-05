@@ -29,7 +29,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     public void delete(Integer id) throws ServiceException {
-        Validator.isGreaterZero(id);
          orderRepository.deleteById(id);
     }
 

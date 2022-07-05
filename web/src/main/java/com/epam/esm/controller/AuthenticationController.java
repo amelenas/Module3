@@ -3,6 +3,7 @@ package com.epam.esm.controller;
 import com.epam.esm.controller.config.security.jwt.JwtTokenUtil;
 import com.epam.esm.controller.config.security.jwt.entity.AuthRequest;
 import com.epam.esm.controller.config.security.jwt.entity.JwtResponse;
+import com.epam.esm.controller.exception.WebException;
 import com.epam.esm.service.dto.entity.UserDto;
 import com.epam.esm.service.dto.entity.UserResponseDto;
 import com.epam.esm.service.impl.UserServiceImpl;
@@ -46,10 +47,6 @@ public class AuthenticationController {
     private String defineRole(UserDetails userDetails) {
         Optional<? extends GrantedAuthority> optionalGrantedAuthority = userDetails.getAuthorities().stream()
                 .findFirst();
-        String role = null;
-        if (optionalGrantedAuthority.isPresent()) {
-            role = optionalGrantedAuthority.get().getAuthority();
-        }
-        return role;
+        return optionalGrantedAuthority.orElseThrow(()-> new WebException("User role not defined")).getAuthority();
     }
 }
